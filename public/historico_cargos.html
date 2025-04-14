@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de Cargos</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f0f8ff; padding: 20px; }
+    h1 { text-align: center; }
+    .container {
+      max-width: 800px; margin: auto; background: #fff;
+      border-radius: 8px; padding: 20px; box-shadow: 0 0 10px #ccc;
+    }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input {
+      width: 100%; padding: 10px; margin: 5px 0 15px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .btn {
+      display: inline-block; padding: 10px 20px;
+      background: #007bff; color: white;
+      border: none; border-radius: 5px; cursor: pointer; margin: 5px;
+    }
+    .btn:hover { background: #0056b3; }
+    table {
+      width: 100%; margin-top: 20px; border-collapse: collapse;
+    }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: center; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr:hover { background-color: #eaeaea; }
+    .btn-small { padding: 5px 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Histórico de Cargos</h1>
+  <div class="container">
+
+    <!-- Formulário de cadastro -->
+    <label>ID do Funcionário:</label>
+    <input type="number" id="txtIdFuncionario">
+    <label>Cargo Anterior:</label>
+    <input type="text" id="txtCargoAnterior">
+    <label>Cargo Novo:</label>
+    <input type="text" id="txtCargoNovo">
+    <label>Data de Alteração:</label>
+    <input type="date" id="txtDataAlteracao">
+    <div style="text-align:center;">
+      <button class="btn" id="btnCadastrar">Cadastrar Histórico</button>
+    </div>
+
+    <!-- Filtro por ID -->
+    <label>Filtrar por ID do Funcionário:</label>
+    <input type="number" id="txtFiltroIdFuncionario" />
+    <div style="text-align:center;">
+      <button class="btn" onclick="filtrarHistorico()">Filtrar</button>
+      <button class="btn" onclick="buscarHistorico()">Limpar Filtro</button>
+    </div>
+
+    <!-- Tabela -->
+    <div id="divHistorico"></div>
+  </div>
+
+  <script>
+      const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Sessão expirada. Faça login novamente.");
+      window.location.href = "login.html";
+    }
+
+    // Define o objeto do usuário autenticado
+    let objUsuario = {
+      token: token
+    };
+
+    function logout() {
+      localStorage.clear(); // Limpa dados salvos
+      window.location.href = "login.html"; // Redireciona
+    }
+    const txtIdFuncionario = document.getElementById("txtIdFuncionario");
+    const txtCargoAnterior = document.getElementById("txtCargoAnterior");
+    const txtCargoNovo = document.getElementById("txtCargoNovo");
+    const txtDataAlteracao = document.getElementById("txtDataAlteracao");
+    const btnCadastrar = document.getElementById("btnCadastrar");
+    const divHistorico = document.getElementById("divHistorico");
+
+   
+
+    function construirTabela(historicos) {
+      divHistorico.innerHTML = "";
+      const tabela = document.createElement("table");
+      const cabecalho = document.createElement("tr");
+      ["ID", "ID Funcionário", "Cargo Anterior", "Cargo Novo", "Data de Alteração"].forEach(t => {
+        const th = document.createElement("th");
+        th.textContent = t;
+        cabecalho.appendChild(th);
+      });
+      tabela.appendChild(cabecalho);
+
+      historicos.forEach(h => {
+        const linha = document.createElement("tr");
+        [h.id_h, h.id_funcionario, h.cargo_anterior, h.cargo_novo, h.data_alteracao].forEach(c => {
+          const td = document.createElement("td");
+          td.textContent = c;
+          linha.appendChild(td);
+        });
+        tabela.appendChild(linha);
+      });
+
+      divHistorico.appendChild(tabela);
+    }
+
+    function buscarHistorico(idFiltro = null) {
+      fetch("/historico_cargos", {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario.token
+        }
+      })
+        .then(res => res.json())
+        .then(json => {
+          if (json.status) {
+            let lista = json.Historico_cargos || [];
+            if (idFiltro) {
+              lista = lista.filter(h => h.id_funcionario == idFiltro);
+            }
+            construirTabela(lista);
+          }
+        });
+    }
+
+    function filtrarHistorico() {
+      const id = document.getElementById("txtFiltroIdFuncionario").value;
+      if (!id) {
+        alert("Informe um ID válido para filtrar.");
+        return;
+      }
+      buscarHistorico(id);
+    }
+
+    function cadastrarHistorico() {
+      const dados = {
+        historico_cargos: {
+          id_funcionario: txtIdFuncionario.value,
+          cargo_anterior: txtCargoAnterior.value,
+          cargo_novo: txtCargoNovo.value,
+          data_alteracao: txtDataAlteracao.value
+        }
+      };
+
+      fetch("/historico_cargos", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario.token
+        },
+        body: JSON.stringify(dados)
+      })
+        .then(res => res.json())
+        .then(json => {
+          if (json.status) {
+            alert("Histórico cadastrado com sucesso!");
+            buscarHistorico();
+          } else {
+            alert("Erro ao cadastrar histórico:\n" + (json.msg || "Verifique os dados."));
+          }
+        })
+        .catch(() => alert("Erro na comunicação com o servidor."));
+    }
+
+    btnCadastrar.onclick = cadastrarHistorico;
+    buscarHistorico();
+  </script>
+</body>
+</html>

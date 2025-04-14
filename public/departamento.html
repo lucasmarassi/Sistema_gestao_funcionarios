@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Departamentos</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f0f8ff; padding: 20px; }
+    h1 { text-align: center; }
+    .container {
+      max-width: 800px; margin: auto; background: #fff;
+      border-radius: 8px; padding: 20px; box-shadow: 0 0 10px #ccc;
+    }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input {
+      width: 100%; padding: 10px; margin: 5px 0 15px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .btn {
+      display: inline-block; padding: 10px 20px;
+      background: #007bff; color: white;
+      border: none; border-radius: 5px; cursor: pointer; margin: 5px;
+    }
+    .btn:hover { background: #0056b3; }
+    table {
+      width: 100%; margin-top: 20px; border-collapse: collapse;
+    }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: center; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr:hover { background-color: #eaeaea; }
+    .btn-small { padding: 5px 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Departamentos</h1>
+  <div class="container">
+    <label>ID (para atualizar):</label>
+    <input type="number" id="txtId" readonly>
+    <label>Nome:</label>
+    <input type="text" id="txtNome">
+    <label>Orçamento:</label>
+    <input type="text" id="txtOrcamento">
+    <label>Localização:</label>
+    <input type="text" id="txtLocalizacao">
+    <label>Data de Criação:</label>
+    <input type="date" id="txtDataCriacao">
+    <div style="text-align:center;">
+      <button class="btn" id="btnCadastrar">Cadastrar</button>
+      <button class="btn" id="btnAtualizar">Atualizar</button>
+    </div>
+    <div id="divDepartamento"></div>
+  </div>
+
+  <script>
+
+const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Sessão expirada. Faça login novamente.");
+      window.location.href = "login.html";
+    }
+
+    // Define o objeto do usuário autenticado
+    let objUsuario = {
+      token: token
+    };
+
+    function logout() {
+      localStorage.clear(); // Limpa dados salvos
+      window.location.href = "login.html"; // Redireciona
+    }
+    const txtId = document.getElementById("txtId");
+    const txtNome = document.getElementById("txtNome");
+    const txtOrcamento = document.getElementById("txtOrcamento");
+    const txtLocalizacao = document.getElementById("txtLocalizacao");
+    const txtDataCriacao = document.getElementById("txtDataCriacao");
+    const btnCadastrar = document.getElementById("btnCadastrar");
+    const btnAtualizar = document.getElementById("btnAtualizar");
+    const divDepartamento = document.getElementById("divDepartamento");
+
+    
+
+    function construirTabela(departamentos) {
+      divDepartamento.innerHTML = "";
+      const tabela = document.createElement("table");
+      const cabecalho = document.createElement("tr");
+      ["ID", "Nome", "Orçamento", "Localização", "Data de Criação", "Selecionar", "Excluir"].forEach(t => {
+        const th = document.createElement("th");
+        th.textContent = t;
+        cabecalho.appendChild(th);
+      });
+      tabela.appendChild(cabecalho);
+
+      departamentos.forEach(dep => {
+        const linha = document.createElement("tr");
+        [dep.id_d, dep.nome, dep.orcamento, dep.localizacao, dep.data_criacao].forEach(c => {
+          const td = document.createElement("td");
+          td.textContent = c;
+          linha.appendChild(td);
+        });
+
+        const btnSel = document.createElement("button");
+        btnSel.textContent = "Selecionar";
+        btnSel.className = "btn-small";
+        btnSel.onclick = () => preencherFormulario(dep);
+
+        const btnDel = document.createElement("button");
+        btnDel.textContent = "Excluir";
+        btnDel.className = "btn-small";
+        btnDel.onclick = () => excluirDepartamento(dep.id_d);
+
+        [btnSel, btnDel].forEach(btn => {
+          const td = document.createElement("td");
+          td.appendChild(btn);
+          linha.appendChild(td);
+        });
+
+        tabela.appendChild(linha);
+      });
+
+      divDepartamento.appendChild(tabela);
+    }
+
+    function preencherFormulario(dep) {
+      txtId.value = dep.id_d;
+      txtNome.value = dep.nome;
+      txtOrcamento.value = dep.orcamento;
+      txtLocalizacao.value = dep.localizacao;
+      txtDataCriacao.value = dep.data_criacao?.substring(0, 10); 
+    }
+
+    function buscarDepartamentos() {
+      fetch("/departamento", {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.status) construirTabela(json.departamentos || []);
+        if (json.token) localStorage.setItem("token", json.token);
+      });
+    }
+
+    function cadastrarDepartamento() {
+      const dados = {
+        departamento: {
+          nome: txtNome.value,
+          orcamento: txtOrcamento.value,
+          localizacao: txtLocalizacao.value,
+          data_criacao: txtDataCriacao.value
+        }
+      };
+
+      fetch("/departamento", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(dados)
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.status) {
+          alert("Departamento cadastrado!");
+          buscarDepartamentos();
+        } else {
+          alert("Erro ao cadastrar departamento: " + (json.msg || "Verifique os dados."));
+        }
+      });
+    }
+
+    function atualizarDepartamento() {
+      const id = txtId.value;
+      const dados = {
+        departamento: {
+          nome: txtNome.value,
+          orcamento: txtOrcamento.value,
+          localizacao: txtLocalizacao.value,
+          data_criacao: txtDataCriacao.value
+        }
+      };
+
+      fetch(`/departamento/${id}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(dados)
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.status) {
+          alert("Departamento atualizado!");
+          buscarDepartamentos();
+        } else {
+          alert("Erro ao atualizar: " + (json.msg || "Verifique os dados."));
+        }
+      });
+    }
+
+    function excluirDepartamento(id) {
+      fetch(`/departamento/${id}`, {
+        method: "DELETE",
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.status) {
+          alert("Departamento excluído!");
+          buscarDepartamentos();
+        } else {
+          alert("Erro ao excluir departamento.");
+        }
+      });
+    }
+
+    btnCadastrar.onclick = cadastrarDepartamento;
+    btnAtualizar.onclick = atualizarDepartamento;
+    buscarDepartamentos();
+  </script>
+</body>
+</html>

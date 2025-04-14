@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastro de Funcionários</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f0f8ff; padding: 20px; }
+    h1 { text-align: center; }
+    .container {
+      max-width: 800px; margin: auto; background: #fff;
+      border-radius: 8px; padding: 20px; box-shadow: 0 0 10px #ccc;
+    }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input {
+      width: 100%; padding: 10px; margin: 5px 0 15px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .btn {
+      display: inline-block; padding: 10px 20px;
+      background: #28a745; color: white;
+      border: none; border-radius: 5px; cursor: pointer; margin: 5px;
+    }
+    .btn:hover { background: #218838; }
+    table {
+      width: 100%; margin-top: 20px; border-collapse: collapse;
+    }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr:hover { background-color: #eaeaea; }
+    .btn-small { padding: 5px 10px; font-size: 14px; }
+  
+    /* NOVO: Flexbox para colocar as duas tabelas lado a lado */
+    .tabelas {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+  </style>
+  
+</head>
+<body>
+  <h1>Cadastro de Funcionários e Perfis</h1>
+  <div class="container">
+    <!-- Formulário do Funcionário -->
+    <label>Nome:</label>
+    <input type="text" id="txtNome"/>
+    <label>Email:</label>
+    <input type="text" id="txtEmail"/>
+    <label>CPF:</label>
+    <input type="text" id="txtCPF"/>
+    <label>Cargo:</label>
+    <input type="text" id="txtCargo"/>
+    <label>Salário:</label>
+    <input type="text" id="txtSalario"/>
+    <label>Data de Contratação:</label>
+    <input type="date" id="txtDataContratacao"/>
+    <label>ID do Departamento:</label>
+    <input type="number" id="txtIdDepartamento"/>
+    <label>ID do Supervisor:</label>
+    <input type="number" id="txtIdSupervisor"/>
+    <label>Senha:</label>
+    <input type="password" id="txtSenha"/>
+
+    <!-- Filtros -->
+    <label>Filtro por nome:</label>
+    <input type="text" id="txtFiltro"/>
+    <label>Filtro por cargo:</label>
+    <input type="text" id="filtroCargo"/>
+    <label>Filtro por departamento:</label>
+    <input type="number" id="filtroDepartamento"/>
+    <label>Filtro por salário mínimo:</label>
+    <input type="number" id="filtroSalario"/>
+
+    <!-- Buscar e cadastrar -->
+    <label>Buscar por ID:</label>
+    <input type="number" id="txtIdBusca"/>
+    <div style="text-align:center;">
+      <button class="btn" id="btnBuscarId">Buscar por ID</button>
+      <button class="btn" id="btnCadastrar">Cadastrar Funcionário</button>
+      
+    </div>
+
+    <!-- Formulário do Perfil -->
+    <h2>Cadastro de Perfil</h2>
+    <label>ID do Funcionário:</label>
+    <input type="number" id="txtIdFuncionarioPerfil"/>
+    <label>Idade:</label>
+    <input type="number" id="txtIdade"/>
+    <label>Endereço:</label>
+    <input type="text" id="txtEndereco"/>
+    <label>Telefone:</label>
+    <input type="text" id="txtTelefone"/>
+    <label>Gênero:</label>
+    <input type="text" id="txtGenero"/>
+    <label>Estado Civil:</label>
+    <input type="text" id="txtEstadoCivil"/>
+    <div style="text-align:center;">
+      <button class="btn" id="btnCadastrarPerfil">Cadastrar Perfil</button>
+    </div>
+  </div>
+
+  <!-- Tabelas lado a lado -->
+  <div class="tabelas">
+    <div id="divDados" style="width: 48%;"></div>
+    <div id="divDadosPerfil" style="width: 48%;"></div>
+  </div>
+
+
+  
+
+  <script>
+  const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Sessão expirada. Faça login novamente.");
+      window.location.href = "login.html";
+    }
+
+    // ✅ Define o objeto do usuário autenticado
+    let objUsuario = {
+      token: token
+    };
+
+    function logout() {
+      localStorage.clear(); // Limpa dados salvos
+      window.location.href = "login.html"; // Redireciona
+    }
+
+    const txtNome = document.getElementById("txtNome");
+    const txtEmail = document.getElementById("txtEmail");
+    const txtCPF = document.getElementById("txtCPF");
+    const txtCargo = document.getElementById("txtCargo");
+    const txtSalario = document.getElementById("txtSalario");
+    const txtDataContratacao = document.getElementById("txtDataContratacao");
+    const txtIdDepartamento = document.getElementById("txtIdDepartamento");
+    const txtIdSupervisor = document.getElementById("txtIdSupervisor");
+    const txtSenha = document.getElementById("txtSenha");
+    const txtFiltro = document.getElementById("txtFiltro");
+    const txtIdBusca = document.getElementById("txtIdBusca");
+    const filtroCargo = document.getElementById("filtroCargo");
+    const filtroDepartamento = document.getElementById("filtroDepartamento");
+    const filtroSalario = document.getElementById("filtroSalario");
+    const btnCadastrar = document.getElementById("btnCadastrar");
+    const btnBuscarId = document.getElementById("btnBuscarId");
+    const divDados = document.getElementById("divDados");
+
+
+    const txtIdFuncionarioPerfil = document.getElementById("txtIdFuncionarioPerfil");
+    const txtIdade = document.getElementById("txtIdade");
+    const txtEndereco = document.getElementById("txtEndereco");
+    const txtTelefone = document.getElementById("txtTelefone");
+    const txtGenero = document.getElementById("txtGenero");
+    const txtEstadoCivil = document.getElementById("txtEstadoCivil");
+    const btnCadastrarPerfil = document.getElementById("btnCadastrarPerfil");
+    const divDadosPerfil = document.getElementById("divDadosPerfil");
+
+
+
+
+
+    
+
+  
+
+    const tabela = document.createElement("table");
+    divDados.appendChild(tabela);
+
+    const linhaCab = document.createElement("tr");
+    ["ID", "Email", "Nome", "Cargo", "Selecionar", "Atualizar", "Excluir"].forEach(texto => {
+      const th = document.createElement("th");
+      th.textContent = texto;
+      linhaCab.appendChild(th);
+    });
+    tabela.appendChild(linhaCab);
+
+    function limparTabela() {
+      while (tabela.rows.length > 1) tabela.deleteRow(1);
+    }
+
+    function construirTabela(lista, filtroNome) {
+      limparTabela();
+      const cargoFiltro = filtroCargo.value.toLowerCase();
+      const departamentoFiltro = filtroDepartamento.value;
+      const salarioFiltro = parseFloat(filtroSalario.value || 0);
+
+      lista.forEach(func => {
+        const nomeOk = func.nome.toLowerCase().includes(filtroNome.toLowerCase());
+        const cargoOk = func.cargo.toLowerCase().includes(cargoFiltro);
+        const departamentoOk = !departamentoFiltro || func.id_departamento == departamentoFiltro;
+        const salarioOk = isNaN(salarioFiltro) || parseFloat(func.salario) >= salarioFiltro;
+
+        if (!(nomeOk && cargoOk && departamentoOk && salarioOk)) return;
+
+        const linha = document.createElement("tr");
+        [func.id_func, func.email, func.nome, func.cargo].forEach(campo => {
+          const td = document.createElement("td");
+          td.textContent = campo;
+          linha.appendChild(td);
+        });
+
+        const btnSel = document.createElement("button");
+        btnSel.textContent = "Selecionar";
+        btnSel.className = "btn-small";
+        btnSel.onclick = () => preencherFormulario(func);
+
+        const btnAtt = document.createElement("button");
+        btnAtt.textContent = "Atualizar";
+        btnAtt.className = "btn-small";
+        btnAtt.onclick = () => atualizarFuncionario(func.id_func);
+
+        const btnDel = document.createElement("button");
+        btnDel.textContent = "Excluir";
+        btnDel.className = "btn-small";
+        btnDel.onclick = () => excluirFuncionario(func.id_func);
+
+        [btnSel, btnAtt, btnDel].forEach(btn => {
+          const td = document.createElement("td");
+          td.appendChild(btn);
+          linha.appendChild(td);
+        });
+
+        tabela.appendChild(linha);
+      });
+    }
+
+    filtroCargo.onkeyup = buscarFuncionarios;
+    filtroDepartamento.oninput = buscarFuncionarios;
+    filtroSalario.oninput = buscarFuncionarios;
+    txtFiltro.onkeyup = buscarFuncionarios;
+
+    function preencherFormulario(func) {
+      txtNome.value = func.nome;
+      txtEmail.value = func.email;
+      txtCPF.value = func.cpf;
+      txtCargo.value = func.cargo;
+      txtSalario.value = func.salario;
+      txtDataContratacao.value = func.data_contratacao?.substring(0, 10);
+      txtIdDepartamento.value = func.id_departamento;
+      txtIdSupervisor.value = func.id_supervisor;
+      txtSenha.value = ""; // segurança
+    }
+
+    function validarCampos() {
+      let camposInvalidos = [];
+      const campos = [
+        { campo: txtNome, nome: "Nome" },
+        { campo: txtEmail, nome: "Email", validacao: v => v.includes("@") },
+        { campo: txtCPF, nome: "CPF" },
+        { campo: txtCargo, nome: "Cargo" },
+        { campo: txtSalario, nome: "Salário", validacao: v => !isNaN(v) && v.trim() !== "" },
+        { campo: txtDataContratacao, nome: "Data de Contratação" },
+        { campo: txtIdDepartamento, nome: "ID do Departamento", validacao: v => v !== "0" && v.trim() !== "" },
+        { campo: txtSenha, nome: "Senha" }
+      ];
+      campos.forEach(({ campo, nome, validacao }) => {
+        campo.style.border = "1px solid #ccc";
+        const valor = campo.value.trim();
+        if (!valor || (validacao && !validacao(valor))) {
+          camposInvalidos.push(nome);
+          campo.style.border = "2px solid red";
+        }
+      });
+      if (camposInvalidos.length > 0) {
+        alert("Preencha corretamente os campos obrigatórios:\n" + camposInvalidos.join(", "));
+        return false;
+      }
+      return true;
+    }
+
+    function buscarFuncionarios() {
+      fetch("/funcionario", {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario?.token
+        }
+      }).then(res => res.json())
+        .then(json => {
+          if (json.status) construirTabela(json.funcionarios || [], txtFiltro.value);
+        });
+    }
+
+    function buscarFuncionarioPorId() {
+      const id = txtIdBusca.value;
+      if (!id) return alert("Informe um ID válido!");
+      fetch(`/funcionario/${id}`, {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario?.token
+        }
+      }).then(res => res.json())
+        .then(json => {
+          if (json.status && json.funcionario) preencherFormulario(json.funcionario[0]);
+          else alert("Funcionário não encontrado!");
+        });
+    }
+
+    function cadastrarFuncionario() {
+      if (!validarCampos()) return;
+      const dados = {
+        funcionario: {
+          nome: txtNome.value,
+          email: txtEmail.value,
+          cpf: txtCPF.value,
+          cargo: txtCargo.value,
+          salario: txtSalario.value,
+          data_contratacao: txtDataContratacao.value,
+          id_departamento: txtIdDepartamento.value,
+          id_supervisor: txtIdSupervisor.value || null,
+          senha: txtSenha.value
+        }
+      };
+      fetch("/funcionario", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario?.token
+        },
+        body: JSON.stringify(dados)
+      }).then(res => res.json())
+      .then(json => {
+        if (json.status === true) {
+          alert("Funcionário cadastrado com sucesso!");
+          buscarFuncionarios();
+        } else {
+          alert("Erro ao cadastrar funcionário:\n" + (json.msg || "Verifique os campos e tente novamente."));
+        }
+      })
+      .catch(() => {
+        alert("Erro na comunicação com o servidor.");
+      });
+
+    }
+
+    function atualizarFuncionario(id) {
+      if (!validarCampos()) return;
+      const senhaTratada = txtSenha.value?.trim() || "";
+      const dados = {
+        funcionario: {
+          nome: txtNome.value,
+          email: txtEmail.value,
+          cpf: txtCPF.value,
+          cargo: txtCargo.value,
+          salario: txtSalario.value,
+          data_contratacao: txtDataContratacao.value,
+          id_departamento: txtIdDepartamento.value,
+          id_supervisor: txtIdSupervisor.value || null,
+          senha: senhaTratada
+        }
+      };
+      fetch(`/funcionario/${id}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario?.token
+        },
+        body: JSON.stringify(dados)
+      }).then(res => res.json())
+        .then(json => {
+          if (json.status === true) {
+            alert("Funcionário atualizado com sucesso!");
+            buscarFuncionarios();
+          } else {
+            alert("Erro ao atualizar funcionário:\n" + (json.msg || "Verifique os dados enviados."));
+          }
+        })
+        .catch(() => {
+          alert("Erro na comunicação com o servidor.");
+        });
+
+    }
+
+    function excluirFuncionario(id) {
+      fetch(`/funcionario/${id}`, {
+        method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + objUsuario?.token
+        }
+      }).then(() => {
+        alert("Funcionário excluído!");
+        buscarFuncionarios();
+      });
+    }
+
+
+
+/////////////////////////////perfil 
+const tabelaPerfil = document.createElement("table");
+divDadosPerfil.appendChild(tabelaPerfil);
+
+const linhaCabPerfil = document.createElement("tr");
+["ID Perfil", "ID Funcionário", "Idade", "Endereço", "Telefone", "Gênero", "Estado Civil", "Selecionar", "Atualizar", "Excluir"].forEach(texto => {
+  const th = document.createElement("th");
+  th.textContent = texto;
+  linhaCabPerfil.appendChild(th);
+});
+tabelaPerfil.appendChild(linhaCabPerfil);
+
+function limparTabelaPerfil() {
+  while (tabelaPerfil.rows.length > 1) tabelaPerfil.deleteRow(1);
+}
+
+function construirTabelaPerfil(lista) {
+  limparTabelaPerfil();
+
+  lista.forEach(perfil => {
+    const linha = document.createElement("tr");
+    [perfil.id_perfil, perfil.id_funcionario, perfil.idade, perfil.endereco, perfil.telefone, perfil.genero, perfil.estado_civil].forEach(campo => {
+      const td = document.createElement("td");
+      td.textContent = campo;
+      linha.appendChild(td);
+    });
+
+    const btnSel = document.createElement("button");
+    btnSel.textContent = "Selecionar";
+    btnSel.className = "btn-small";
+    btnSel.onclick = () => preencherFormularioPerfil(perfil);
+
+    const btnAtt = document.createElement("button");
+    btnAtt.textContent = "Atualizar";
+    btnAtt.className = "btn-small";
+    btnAtt.onclick = () => atualizarPerfil(perfil.id_funcionario);
+
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "Excluir";
+    btnDel.className = "btn-small";
+    btnDel.onclick = () => excluirPerfil(perfil.id_funcionario);
+
+    [btnSel, btnAtt, btnDel].forEach(btn => {
+      const td = document.createElement("td");
+      td.appendChild(btn);
+      linha.appendChild(td);
+    });
+
+    tabelaPerfil.appendChild(linha);
+  });
+}
+
+function preencherFormularioPerfil(perfil) {
+  txtIdFuncionarioPerfil.value = perfil.id_funcionario;
+  txtIdade.value = perfil.idade;
+  txtEndereco.value = perfil.endereco;
+  txtTelefone.value = perfil.telefone;
+  txtGenero.value = perfil.genero;
+  txtEstadoCivil.value = perfil.estado_civil;
+}
+
+function buscarPerfis() {
+  fetch("/perfis", {
+    method: "GET",
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + objUsuario?.token
+    }
+  })
+    .then(res => res.json())
+    .then(json => {
+      if (json.status) construirTabelaPerfil(json.perfis || []);
+    });
+}
+
+function cadastrarPerfil() {
+  const dados = {
+    perfis: {
+      id_funcionario: txtIdFuncionarioPerfil.value,
+      idade: txtIdade.value,
+      endereco: txtEndereco.value,
+      telefone: txtTelefone.value,
+      genero: txtGenero.value,
+      estado_civil: txtEstadoCivil.value
+    }
+  };
+
+  fetch("/perfis", {
+    method: "POST",
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + objUsuario?.token
+    },
+    body: JSON.stringify(dados)
+  })
+    .then(res => res.json())
+    .then(json => {
+  if (json.status) {
+    alert("Perfil cadastrado com sucesso!");
+    buscarPerfis();
+  } else {
+    alert("Erro ao cadastrar perfil:\n" + (json.msg || "Verifique os dados."));
+  }
+})
+.catch(() => alert("Erro na comunicação com o servidor."));
+
+}
+
+function atualizarPerfil(id_funcionario) {
+  const dados = {
+    perfis: {
+      idade: txtIdade.value,
+      endereco: txtEndereco.value,
+      telefone: txtTelefone.value,
+      genero: txtGenero.value,
+      estado_civil: txtEstadoCivil.value
+    }
+  };
+
+  fetch(`/perfis/${id_funcionario}`, {
+    method: "PUT",
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + objUsuario?.token
+    },
+    body: JSON.stringify(dados)
+  })
+  .then(res => res.json())
+.then(json => {
+  if (json.status === true) {
+    alert("Perfil atualizado com sucesso!");
+    buscarPerfis();
+  } else {
+    alert("Erro ao atualizar perfil:\n" + (json.msg || "ID do funcionário inválido ou outro erro."));
+  }
+})
+.catch(() => alert("Erro na comunicação com o servidor."));
+
+}
+
+function excluirPerfil(id_funcionario) {
+  fetch(`/perfis/${id_funcionario}`, {
+    method: "DELETE",
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + objUsuario?.token
+    }
+  })
+    .then(res => res.json())
+    .then(json => {
+      if (json.status) {
+        alert("Perfil excluído com sucesso!");
+        buscarPerfis();
+      } else {
+        alert("Erro ao excluir perfil.");
+      }
+    });
+}
+
+
+
+
+
+    //btnCadastrar.onclick = cadastrarFuncionario;
+   // btnBuscarId.onclick = buscarFuncionarioPorId;
+   // buscarFuncionarios();
+
+
+    btnCadastrar.onclick = cadastrarFuncionario;
+btnBuscarId.onclick = buscarFuncionarioPorId;
+btnCadastrarPerfil.onclick = cadastrarPerfil;
+
+// Buscar dados ao carregar a página
+buscarFuncionarios();
+buscarPerfis();
+
+  </script>
+</body>
+</html>

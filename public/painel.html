@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      min-height: 100vh;
+      padding-top: 30px;
+    }
+
+    #div_dados_Usuario {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      text-align: center;
+      width: 90%;
+      max-width: 500px;
+    }
+
+    #div_dados_Usuario p {
+      margin: 10px 0;
+      font-size: 18px;
+      font-weight: bold;
+      color: #5b9bd5;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: white;
+      background-color: #5b9bd5;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      background-color: #4a8ac1;
+    }
+
+    #resumoDashboard {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      width: 90%;
+      max-width: 500px;
+    }
+
+    #resumoDashboard p {
+      margin: 10px 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    canvas {
+      max-width: 600px;
+      max-height: 400px;
+      margin-bottom: 30px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <canvas id="grafico1"></canvas>
+  <canvas id="grafico2"></canvas> 
+
+  <div id="div_dados_Usuario">
+    <p>Bem-vindo, <span id="userName"></span></p>
+  </div>
+
+  <div class="nav-links">
+    <a href="funcionario.html">Funcionários</a>
+    <a href="historico_cargos.html">Histórico de Cargos</a>
+    <a href="departamento.html">Departamentos</a>
+    <a href="#" onclick="logout()">Sair</a>
+  </div>
+
+  <div id="resumoDashboard">
+    <p>Carregando resumo...</p>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Sessão expirada. Faça login novamente.");
+      window.location.href = "login.html";
+    }
+
+    const email = localStorage.getItem("email");
+    document.getElementById("userName").textContent = email || "usuário";
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    function carregarResumoDashboard() {
+      fetch("/funcionario/resumo/estatistico", {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.token) {
+          localStorage.setItem("token", json.token);
+          token = json.token; // Atualiza o token usado no próximo fetch
+        }
+
+        if (json.status) {
+          const div = document.getElementById("resumoDashboard");
+          div.innerHTML = `
+            <p><strong>Total de Funcionários:</strong> ${json.resumo.total_funcionarios}</p>
+            <p><strong>Média Salarial:</strong> R$ ${parseFloat(json.resumo.media_salarial).toFixed(2)}</p>
+            <p><strong>Maior Salário:</strong> R$ ${parseFloat(json.resumo.maior_salario).toFixed(2)}</p>
+            <p><strong>Menor Salário:</strong> R$ ${parseFloat(json.resumo.menor_salario).toFixed(2)}</p>
+          `;
+
+          carregarGraficosMediaIdade(); 
+           carregarGraficoMediaSalarial();// Só chama o gráfico após atualizar o token
+        } else {
+          alert("Erro ao carregar resumo.");
+        }
+      })
+      .catch(() => alert("Erro na comunicação com o servidor."));
+    }
+
+    function carregarGraficosMediaIdade() {
+      fetch("/perfis/media_idade_departamento", {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.token) {
+          localStorage.setItem("token", json.token);
+          token = json.token; // Atualiza novamente
+        }
+
+        if (json.status && json.perfis) {
+          const nomesDeptos = json.perfis.map(p => p.departamento);
+          const mediasIdades = json.perfis.map(p => p.media_idade);
+
+          const ctx = document.getElementById('grafico1');
+
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: nomesDeptos,
+              datasets: [{
+                label: 'Média de Idade por Departamento',
+                data: mediasIdades,
+                borderWidth: 1,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Idade Média'
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Departamento'
+                  }
+                }
+              }
+            }
+          });
+        } else {
+          alert("Erro ao carregar gráfico.");
+        }
+      })
+      .catch(() => alert("Erro na comunicação com o servidor."));
+    }
+
+
+
+    function carregarGraficoMediaSalarial() {
+      fetch("/funcionario/media_salario_departamento", {
+
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.token) {
+        localStorage.setItem("token", json.token);
+        token = json.token;
+      }
+
+      if (json.status && json.funcionario) {
+        const nomesDeptos = json.funcionario.map(p => p.departamento);
+        const mediasSalarios = json.funcionario.map(p => parseFloat(p.media_salario));
+
+        const ctx = document.getElementById('grafico2');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: nomesDeptos,
+            datasets: [{
+              label: 'Média Salarial por Departamento',
+              data: mediasSalarios,
+              borderWidth: 1,
+              backgroundColor: 'rgba(255, 159, 64, 0.6)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Salário Médio (R$)'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Departamento'
+                }
+              }
+            }
+          }
+        });
+      } else {
+        alert("Erro ao carregar gráfico de salário.");
+      }
+    })
+    .catch(() => alert("Erro na comunicação com o servidor."));
+  }
+
+
+    
+
+    carregarResumoDashboard();
+  </script>
+</body>
+</html>

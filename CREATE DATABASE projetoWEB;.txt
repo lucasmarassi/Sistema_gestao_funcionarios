@@ -1,0 +1,66 @@
+CREATE DATABASE projetoWEB;
+USE projetoWEB;
+
+CREATE TABLE departamento(
+    id_d INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(255),
+    orcamento FLOAT NOT NULL,
+    localizacao VARCHAR(255),
+    data_criacao DATE
+);
+
+INSERT INTO departamento (nome, orcamento, localizacao, data_criacao) VALUES
+('TI', 500000, 'São Paulo', '2023-01-01'),
+('RH', 200000, 'Rio de Janeiro', '2023-01-10');
+
+
+
+
+
+
+CREATE TABLE funcionario (
+    id_func INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(200),
+    email VARCHAR(255) UNIQUE,
+    cpf VARCHAR(14),
+    cargo VARCHAR(50),
+    salario DECIMAL(10,2),
+	data_contratacao DATE,
+    id_departamento INT NOT NULL,
+    id_supervisor INT,
+    senha VARCHAR(50) NOT NULL,
+    FOREIGN KEY (id_departamento) REFERENCES departamento(id_d),
+    FOREIGN KEY (id_supervisor) REFERENCES funcionario(id_func)
+);
+
+INSERT INTO funcionario (nome, email, cpf, cargo, salario, data_contratacao, id_departamento, senha) VALUES
+('Wanderley', 'marcelhcp80@gmail.com', '12345678900', 'Gerente de Projetos', 8000.00, '2020-05-03', 1, '1234');
+
+CREATE TABLE perfis(
+    id_perfil INT PRIMARY KEY NOT NULL AUTO_INCREMENT, 
+	id_funcionario INT,
+    idade INT,
+	endereco VARCHAR(255) NOT NULL,
+    telefone VARCHAR(15) NOT NULL,
+    genero VARCHAR(20) NOT NULL,
+    estado_civil VARCHAR(50) NOT NULL, 
+   FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_func)
+);
+
+INSERT INTO perfis (id_funcionario, idade, endereco, telefone, genero, estado_civil) VALUES
+(1, 45, 'Rua Exemplo, 123', '11999999999', 'Masculino', 'Casado');
+
+
+CREATE TABLE historico_cargos(
+ id_h INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+ id_funcionario INT,
+ cargo_anterior VARCHAR(20) ,
+ cargo_novo VARCHAR(20) NOT NULL,
+ data_alteracao DATE,
+ FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_func)
+); 
+INSERT INTO historico_cargos (id_funcionario, cargo_anterior, cargo_novo, data_alteracao) VALUES
+(1, 'Analista Sênior', 'Gerente de Projetos', '2023-01-10');
+
+
+#DROP DATABASE projetoWEB;
